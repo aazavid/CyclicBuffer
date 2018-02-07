@@ -5,35 +5,55 @@
 template <class T>
 class TCyclicBuffer
 {
-	T * tBuffer_;
-	int iSizeBuff_;       // размер циклического буфера
-	int iPos_;            // позиция вставки и удаления (--iPos)
+	typedef int INDEX_T;     ////< псевдоним для индексов
+
+	T * tBuffer_;            ////< указатель на буффер
+
+	int iSizeBuff_;       	  ////< размер циклического буфера
+	INDEX_T iPosRead_;        ////< позиция чтения
+	INDEX_T iPosWrite_;       ////< позиция записи
 
 
 public:
 	TCyclicBuffer(int size);
    ~TCyclicBuffer();
 
-	void add(const T);        // поместить элемент сверху
-	T pop();               // удалить   последний элемент
+	bool read(T& item);        		////< чтение из буффера
+	bool write(const T& item);       ////< запись в буффер
 
-	T getElement(int item);   // получить  элемент
+	T getElement(INDEX_T item);   // получить  элемент
 
-	bool resize(int newSize); // изменить размер буффера
+	bool resize(int newSize); // TODO: изменить размер буффера
 	void clear();             // очистить все ячейки
+
 	int size(){return iSizeBuff_;}
+	int count(){return iPosWrite_ - iPosRead_;}
 
 	bool isEmpty();
 	bool isFull();
 
+	inline T& operator[] (INDEX_T i)
+	{
+		if(IsEmpty() || i > Count())
+			return T();
+		return tBuffer_[iPosRead_++];
+	}
+
+	inline const T operator[] (INDEX_T i)const
+	{
+		if(IsEmpty())
+			  return T();
+		return tBuffer_[iPosRead_++];
+	}
+
 };
 //----------------------------------------------------------------------------
 template <class T>
-TCyclicBuffer<T>::TCyclicBuffer(int size)
+TCyclicBuffer<T>::TCyclicBuffer(int size):iPosRead_(0), iPosWrite_(0)
 {
 	iSizeBuff_ = size > 0 ? size: 10;   // инициализировать размер буфера
 	tBuffer_ = new T[iSizeBuff_];       // выделить память под буфер
-	iPos_ = 0;                          // значение 0 говорит о том, что стек пуст
+
 }
 //----------------------------------------------------------------------------
 template <class T>
@@ -43,37 +63,37 @@ TCyclicBuffer<T>::~TCyclicBuffer()
 }
 //----------------------------------------------------------------------------
 template <class T>
-void TCyclicBuffer<T>::add(const T item)
+bool TCyclicBuffer<T>::read(T& item)
 {
-   if(iPos_ == iSizeBuff_) iPos_ = 0;
-   tBuffer_[iPos_] = item;
-   ++iPos_;
+   if(isEmpty()) return false;
+   item = tBuffer_[iPosRead_];
+   iPosRead_++;
+   if(iPosRead_ + 1 > iSizeBuff_) iPosRead_= 0;
+   return true;
+
 }
 //----------------------------------------------------------------------------
 template <class T>
-T TCyclicBuffer<T>::pop()
+bool TCyclicBuffer<T>::write(const T& item)
 {
-   --iPos_;
-   	T temp = tBuffer_[iPos_];
-   if(iPos_ < 0)
-   {
-	 iPos_ = iSizeBuff_ - 1;
-   }
-   return temp;
+   if(isFull()) return false;
+   if(iPosWrite_ + 1 > iSizeBuff_)iPosWrite_ = 0;
+   tBuffer_[iPosWrite_] = item;
+   iPosWrite_++;
+   return true;
+
 }
 //----------------------------------------------------------------------------
 template <class T>
 bool TCyclicBuffer<T>::isEmpty()
 {
-   if(iPos_ == 0) return true;
-   else return false;
+   return iPosRead_ == iPosWrite_;
 }
 //----------------------------------------------------------------------------
 template <class T>
 bool TCyclicBuffer<T>::isFull()
 {
-   if(iPos_ == iSizeBuff_) return true;
-   else return false;
+   return iPosWrite_ - iPosWrite_ == iSizeBuff_;
 }
 //----------------------------------------------------------------------------
 template <class T>
